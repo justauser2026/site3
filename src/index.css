@@ -1880,7 +1880,7 @@
 .room-kitchen .pixel-fridge,
 .room-kitchen .pixel-stove,
 .room-kitchen .pixel-microwave,
-.room-kitchen .pixel-water,
+.room-kitchen .pixel-water {
   display: block;
 }
 
