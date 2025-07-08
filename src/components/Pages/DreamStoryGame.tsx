@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Trophy, Moon, Sun, Coffee, Smartphone, Bed, Volume2, VolumeX, Star, Award, Heart, Users, Briefcase, Home, Dumbbell, Utensils, Droplets, Bath, Tv, Book, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { ArrowLeft, Trophy, Moon, Sun, Coffee, Smartphone, Bed, Volume2, VolumeX, Star, Award, Heart, Users, Briefcase, Home, Dumbbell, Utensils, Droplets, Bath, Tv, Book, ChevronLeft, ChevronRight, Clock, Save } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
 
 interface DreamStoryGameProps {
@@ -77,6 +77,9 @@ const DreamStoryGame: React.FC<DreamStoryGameProps> = ({ onBack }) => {
     consequence: string;
     points: number;
   }>({ show: false, message: '', consequence: '', points: 0 });
+  
+  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
+  const [showSaveSuccess, setShowSaveSuccess] = useState(false);
   
   const [gameState, setGameState] = useState<GameState>({
     score: 0,
@@ -623,12 +626,61 @@ const DreamStoryGame: React.FC<DreamStoryGameProps> = ({ onBack }) => {
     setShowConfirmation({ show: false, action: '', actionId: 'sleep', room: '' });
   };
 
-  const toggleMusic = () => {
-    setGameState(prev => ({ ...prev, musicEnabled: !prev.musicEnabled }));
+  const saveGame = () => {
+    try {
+      const saveData = {
+        gameState,
+        savedAt: new Date().toISOString(),
+        version: '1.0.0'
+      };
+      localStorage.setItem('dream-story-save', JSON.stringify(saveData));
+      return true;
+    } catch (error) {
+      console.error('Erro ao salvar o jogo:', error);
+      return false;
+    }
   };
 
-  const toggleSound = () => {
-    setGameState(prev => ({ ...prev, soundEnabled: !prev.soundEnabled }));
+  const loadGame = () => {
+    try {
+      const saveData = localStorage.getItem('dream-story-save');
+      if (saveData) {
+        const parsed = JSON.parse(saveData);
+        if (parsed.gameState) {
+          setGameState({
+            ...parsed.gameState,
+            gameTime: new Date(parsed.gameState.gameTime),
+            lastActionTime: new Date(parsed.gameState.lastActionTime)
+          });
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('Erro ao carregar o jogo:', error);
+      return false;
+    }
+  };
+
+  const handleSaveGame = () => {
+    const success = saveGame();
+    setShowSaveConfirmation(false);
+    
+    if (success) {
+      setShowSaveSuccess(true);
+      setTimeout(() => {
+        setShowSaveSuccess(false);
+      }, 2000);
+    }
+  };
+
+  // Carregar jogo salvo ao inicializar
+  useEffect(() => {
+    loadGame();
+  }, []);
+
+  const toggleMusic = () => {
+    setGameState(prev => ({ ...prev, musicEnabled: !prev.musicEnabled }));
   };
 
   const currentRoom = getCurrentRoom();
@@ -643,9 +695,9 @@ const DreamStoryGame: React.FC<DreamStoryGameProps> = ({ onBack }) => {
           ? 'bg-slate-900/95 border-slate-800' 
           : 'bg-white/95 border-gray-200'
       }`}>
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+        <div className="px-3 py-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
               <button
                 onClick={onBack}
                 className={`p-2 rounded-full transition-colors ${
@@ -656,73 +708,49 @@ const DreamStoryGame: React.FC<DreamStoryGameProps> = ({ onBack }) => {
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <div className="w-6 h-6 bg-purple-500/20 rounded-lg flex items-center justify-center">
                   <Star className="w-4 h-4 text-purple-400" />
                 </div>
-                <h1 className={`text-lg font-bold transition-colors duration-300 ${
+                <h1 className={`text-base font-bold transition-colors duration-300 ${
                   isDark ? 'text-white' : 'text-gray-900'
                 }`}>Dream Story</h1>
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               {/* Game Clock */}
-              <div className={`flex items-center gap-1 px-3 py-1 rounded-lg transition-colors duration-300 ${
+              <div className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors duration-300 ${
                 isDark ? 'bg-slate-800 text-white' : 'bg-gray-200 text-gray-900'
               }`}>
-                <Clock className="w-4 h-4" />
-                <span className="text-sm font-mono">{formatGameTime()}</span>
+                <Clock className="w-3 h-3" />
+                <span className="text-xs font-mono">{formatGameTime()}</span>
               </div>
+
+              {/* Save Game Button */}
+              <button
+                onClick={() => setShowSaveConfirmation(true)}
+                className={`p-2 rounded-lg transition-colors ${
+                  isDark 
+                    ? 'bg-slate-800 hover:bg-slate-700 text-white' 
+                    : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
+                }`}
+                title="Salvar jogo"
+              >
+                <Save className="w-4 h-4" />
+              </button>
 
               {/* Music Toggle */}
               <button
                 onClick={toggleMusic}
-                className={`p-2 rounded-lg transition-colors relative ${
+                className={`p-2 rounded-lg transition-colors ${
                   isDark 
                     ? 'bg-slate-800 hover:bg-slate-700 text-white' 
                     : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
                 }`}
                 title={gameState.musicEnabled ? 'Desativar música' : 'Ativar música'}
               >
-                <div className="relative">
-                  <Volume2 className={`w-4 h-4 ${gameState.musicEnabled ? 'text-emerald-400' : 'text-gray-500'}`} />
-                  {!gameState.musicEnabled && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-5 h-0.5 bg-red-500 rotate-45"></div>
-                    </div>
-                  )}
-                </div>
-                {musicLoaded && (
-                  <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${
-                    gameState.musicEnabled ? 'bg-green-400' : 'bg-gray-400'
-                  }`}></div>
-                )}
-              </button>
-
-              {/* Sound Effects Toggle */}
-              <button
-                onClick={toggleSound}
-                className={`p-2 rounded-lg transition-colors ${
-                  isDark 
-                    ? 'bg-slate-800 hover:bg-slate-700 text-white' 
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
-                }`}
-                title={gameState.soundEnabled ? 'Desativar efeitos sonoros' : 'Ativar efeitos sonoros'}
-              >
-                {gameState.soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-              </button>
-              
-              <button
-                onClick={resetGame}
-                className={`p-2 rounded-lg transition-colors ${
-                  isDark 
-                    ? 'bg-slate-800 hover:bg-slate-700 text-white' 
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
-                }`}
-                title="Reiniciar jogo"
-              >
-                <Trophy className="w-4 h-4" />
+                {gameState.musicEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
               </button>
             </div>
           </div>
@@ -732,12 +760,12 @@ const DreamStoryGame: React.FC<DreamStoryGameProps> = ({ onBack }) => {
       {/* Game Content */}
       <div className="flex-1 flex flex-col min-h-0">
         {/* Stats Bar */}
-        <div className={`flex-shrink-0 px-4 py-3 border-b transition-colors duration-300 ${
+        <div className={`flex-shrink-0 px-3 py-2 border-b transition-colors duration-300 ${
           isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-emerald-50/50 border-emerald-200'
         }`}>
-          <div className="grid grid-cols-4 gap-2 text-center">
+          <div className="grid grid-cols-4 gap-1 text-center">
             <div>
-              <div className={`text-lg font-bold ${getScoreColor()}`}>
+              <div className={`text-base font-bold ${getScoreColor()}`}>
                 {gameState.score}
               </div>
               <div className={`text-xs transition-colors duration-300 ${
@@ -746,7 +774,7 @@ const DreamStoryGame: React.FC<DreamStoryGameProps> = ({ onBack }) => {
             </div>
             
             <div>
-              <div className={`text-lg font-bold transition-colors duration-300 ${
+              <div className={`text-base font-bold transition-colors duration-300 ${
                 isDark ? 'text-purple-400' : 'text-purple-600'
               }`}>
                 Dia {gameState.currentDay}
@@ -757,14 +785,14 @@ const DreamStoryGame: React.FC<DreamStoryGameProps> = ({ onBack }) => {
             </div>
 
             <div>
-              <div className="text-lg">{getMoodEmoji()}</div>
+              <div className="text-base">{getMoodEmoji()}</div>
               <div className={`text-xs transition-colors duration-300 ${
                 isDark ? 'text-slate-400' : 'text-emerald-700'
               }`}>Humor</div>
             </div>
 
             <div>
-              <div className={`text-lg font-bold transition-colors duration-300 ${
+              <div className={`text-sm font-bold transition-colors duration-300 ${
                 isDark ? 'text-emerald-400' : 'text-emerald-600'
               }`}>
                 {currentRoom.name}
@@ -951,6 +979,68 @@ const DreamStoryGame: React.FC<DreamStoryGameProps> = ({ onBack }) => {
               </div>
             </div>
           )}
+          {showSaveConfirmation && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className={`backdrop-blur-sm rounded-2xl p-6 border max-w-sm mx-4 transition-colors duration-300 ${
+                isDark 
+                  ? 'bg-slate-900/90 border-slate-800' 
+                  : 'bg-white/90 border-gray-200 shadow-lg'
+              }`}>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Save className="w-8 h-8 text-emerald-400" />
+                  </div>
+                  <h3 className={`text-lg font-bold mb-3 transition-colors duration-300 ${
+                    isDark ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    Salvar Jogo
+                  </h3>
+                  <p className={`text-sm mb-6 transition-colors duration-300 ${
+                    isDark ? 'text-slate-300' : 'text-gray-700'
+                  }`}>
+                    Você deseja salvar o jogo?
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowSaveConfirmation(false)}
+                      className={`flex-1 px-4 py-3 rounded-xl font-medium transition-colors ${
+                        isDark 
+                          ? 'bg-slate-800 hover:bg-slate-700 text-white' 
+                          : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
+                      }`}
+                    >
+                      Não
+                    </button>
+                    <button
+                      onClick={handleSaveGame}
+                      className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-3 rounded-xl font-medium transition-colors"
+                    >
+                      Sim
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Save Success Modal */}
+          {showSaveSuccess && (
+            <div className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none">
+              <div className={`backdrop-blur-sm rounded-2xl p-6 border max-w-sm mx-4 transition-colors duration-300 ${
+                isDark 
+                  ? 'bg-green-500/20 border-green-500/30 text-green-400'
+                  : 'bg-green-100/80 border-green-300/50 text-green-700'
+              }`}>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Save className="w-8 h-8 text-green-400" />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2">Jogo Salvo!</h3>
+                  <p className="text-sm">Seu progresso foi salvo com sucesso.</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Feedback Modal */}
           {showFeedback.show && (
@@ -974,7 +1064,7 @@ const DreamStoryGame: React.FC<DreamStoryGameProps> = ({ onBack }) => {
         <div className={`flex-shrink-0 px-4 py-3 border-t transition-colors duration-300 ${
           isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-emerald-50/50 border-emerald-200'
         }`}>
-          <div className="grid grid-cols-5 gap-2 text-center">
+          <div className="grid grid-cols-5 gap-1 text-center">
             {[
               { label: 'Saúde', value: gameState.alex.health, icon: Heart, color: 'text-red-400' },
               { label: 'Energia', value: gameState.alex.energy, icon: Award, color: 'text-yellow-400' },
@@ -983,20 +1073,20 @@ const DreamStoryGame: React.FC<DreamStoryGameProps> = ({ onBack }) => {
               { label: 'Produtividade', value: gameState.alex.productivity, icon: Briefcase, color: 'text-green-400' }
             ].map((stat, index) => (
               <div key={index}>
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <stat.icon className={`w-3 h-3 ${stat.color}`} />
+                <div className="flex items-center justify-center gap-0.5 mb-1">
+                  <stat.icon className={`w-2.5 h-2.5 ${stat.color}`} />
                   <span className={`text-xs font-medium transition-colors duration-300 ${
                     isDark ? 'text-white' : 'text-gray-900'
                   }`}>{stat.label}</span>
                 </div>
-                <div className={`text-sm font-bold ${getStatColor(stat.value)}`}>
+                <div className={`text-xs font-bold ${getStatColor(stat.value)}`}>
                   {stat.value}%
                 </div>
-                <div className={`w-full rounded-full h-1 mt-1 transition-colors duration-300 ${
+                <div className={`w-full rounded-full h-0.5 mt-1 transition-colors duration-300 ${
                   isDark ? 'bg-slate-800' : 'bg-gray-200'
                 }`}>
                   <div
-                    className={`h-1 rounded-full transition-all duration-300 ${
+                    className={`h-0.5 rounded-full transition-all duration-300 ${
                       stat.value >= 70 ? 'bg-green-400' :
                       stat.value >= 40 ? 'bg-yellow-400' : 'bg-red-400'
                     }`}
